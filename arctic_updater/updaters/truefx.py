@@ -11,6 +11,7 @@ import traceback
 from .base import Updater
 
 import datetime
+import requests
 
 import pandas as pd
 import pandas.compat as compat
@@ -57,8 +58,7 @@ class TrueFXUpdater(Updater):
 
         logger.debug("querying '%s'" % url)
         response = self.session.get(url)
-        status_code_expected = [200]
-        if response.status_code in status_code_expected:
+        if response.status_code == requests.codes.ok:
             zip_data = compat.BytesIO(response.content)
 
             with ZipFile(zip_data, 'r') as zf:
@@ -70,7 +70,7 @@ class TrueFXUpdater(Updater):
         
             return df
         else:
-            logger.error("status_code is %d instead of %s" % (response.status_code, status_code_expected))
+            logger.error("status_code is %d instead of %d" % (response.status_code, requests.codes.ok))
 
     def _read_several_months(self, symbol, start, end):
         symbol = self._sanitize_symbol(symbol)
