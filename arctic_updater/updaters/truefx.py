@@ -19,18 +19,20 @@ from pandas.tseries.frequencies import to_offset
 
 from .base import Updater
 
+#from clint.textui import progress  # pip install clint
 
 class TrueFXUpdater(Updater):
     shortname = 'TRUEFX'
 
     """Get data from TrueFX"""
 
-    def __init__(self, retry_count=3, pause=0.001, session=None):
+    def __init__(self, retry_count=3, pause=0.001, session=None, cache_directory='cache/truefx'):
         if not isinstance(retry_count, int) or retry_count < 0:
             raise ValueError("'retry_count' must be integer larger than 0")
         self.retry_count = retry_count
         self.pause = pause
         self.session = self._init_session(session, retry_count)
+        self.cache_directory = cache_directory
 
     def url(self, symbol, year, month):
         month_name = datetime.datetime(year=year, month=month, day=1).strftime('%B').upper()
@@ -60,7 +62,7 @@ class TrueFXUpdater(Updater):
         for dt in months:
             yield dt.year, dt.month
 
-    def _download(self, symbol, year, month, filename_cache, as_):
+    def _get(self, symbol, year, month, filename_cache, as_):
         url = self.url(symbol, year, month)
         if os.path.isfile(filename_cache) and os.path.getsize(filename_cache) > 0:
             logger.debug("skip '%s'" % filename_cache)
@@ -70,6 +72,15 @@ class TrueFXUpdater(Updater):
         else:
             logger.debug("querying '%s'" % url)
             response = self.session.get(url)
+
+            response = self.session.get(url)
+            #response = self.session.get(url, stream=True)
+            #total_length = int(response.headers.get('content-length'))
+            #for chunk in progress.bar(response.iter_content(chunk_size=1024), expected_size=(total_length/1024) + 1): 
+            #    pass
+            if not response.status_code == requests.codes.ok:
+                msg = "status_code is %d instead of %d" % (response.status_code, requests.codes.ok)
+                raise NotImplementedError(msg)
             from_file_cache = False
             if as_ == 'bytes':
                 data = compat.BytesIO(response.content)
@@ -81,7 +92,7 @@ class TrueFXUpdater(Updater):
 
     def download(self, symbol, year, month, cache_directory):
         filename_cache = os.path.join(cache_directory, self._filename(symbol, year, month, '.zip'))
-        fd, from_file_cache = self._download(symbol, year, month, filename_cache, 'raw')
+        fd, from_file_cache = self._get(symbol, year, month, filename_cache, 'raw')
         if not from_file_cache:
             with open(filename_cache, 'w') as fd_cache:
                 fd_cache.write(fd)
@@ -89,28 +100,23 @@ class TrueFXUpdater(Updater):
     def _read_one_month(self, symbol, year, month):
         url = self.url(symbol, year, month)
         symbol = symbol.replace("/", "").upper()
+        filename_cache = os.path.join(self.cache_directory, self._filename(symbol, year, month, '.zip'))
+        zip_data, from_file_cache = self._get(symbol, year, month, filename_cache, 'bytes')
 
-        logger.debug("querying '%s'" % url)
-        response = self.session.get(url)
-        if response.status_code == requests.codes.ok:
-            zip_data = compat.BytesIO(response.content)
+        with ZipFile(zip_data, 'r') as zf:
+            zfile = zf.open(self._filename(symbol, year, month, '.csv'))
+            df = pd.read_csv(zfile, names=['Symbol', 'Date', 'Bid', 'Ask'])
 
-            with ZipFile(zip_data, 'r') as zf:
-                zfile = zf.open(self._filename(symbol, year, month, '.csv'))
-                df = pd.read_csv(zfile, names=['Symbol', 'Date', 'Bid', 'Ask'])
-
-            df['Date'] = pd.to_datetime(df['Date'], format='%Y%m%d %H:%M:%S.%f')
-            df = df.set_index('Date')
-        
-            return df
-        else:
-            logger.error("status_code is %d instead of %d" % (response.status_code, requests.codes.ok))
+        df['Date'] = pd.to_datetime(df['Date'], format='%Y%m%d %H:%M:%S.%f')
+        df = df.set_index('Date')
+    
+        return df
 
     def _read_several_months(self, symbol, start, end):
         symbol = self._sanitize_symbol(symbol)
         lst = []
         lst_errors = []
-        for year, month in self._year_month_generator(start, end)
+        for year, month in self._year_month_generator(start, end):
             try:
                 df = self._read_one_month(symbol, year, month)
                 lst.append(df)

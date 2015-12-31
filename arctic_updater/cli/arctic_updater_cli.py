@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+$ python arctic_updater/cli/arctic_updater_cli.py --updater truefx --symbol EURUSD --start 20130101 --end 20130201 --source 'ticks'
+"""
 import logging
 logger = logging.getLogger(__name__)
 
@@ -36,7 +39,6 @@ def main():
     parser.add_argument('--expire_after', help="Cache expiration ('0': no cache, '-1': no expiration, 'HH:MM:SS.X': expiration duration)", default='24:00:00.0', type=str)
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
     pd.set_option('max_rows', args.max_rows)
     pd.set_option('expand_frame_repr', False)
     pd.set_option('max_columns', args.max_columns)

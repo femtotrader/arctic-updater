@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 logger = logging.getLogger(__name__)
+import traceback
 
 from .base import Updater
 
@@ -13,18 +14,21 @@ try:
     _HAS_QUANDL = True
 except ImportError:
     _HAS_QUANDL = False
+    logger.debug(traceback.format_exc())
 
 try:
     from .pandas_datareader import PandasDataReaderUpdater
     _HAS_PANDAS_DATAREADER = True
 except ImportError:
     _HAS_PANDAS_DATAREADER = False
+    logger.debug(traceback.format_exc())
 
 try:
     from .truefx import TrueFXUpdater
     _HAS_TRUEFX = True
 except ImportError:
     _HAS_TRUEFX = False
+    logger.debug(traceback.format_exc())
 
 _D_CLS_UPDATER = {}
 _D_CLS_UPDATER_SHORTNAME = {}

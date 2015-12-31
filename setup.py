@@ -26,6 +26,8 @@ requirements = [
     'pandas_datareader', 'Quandl'
 ]
 
+#    'clint',
+
 test_requirements = [
     # TODO: put package test requirements here
 ]
