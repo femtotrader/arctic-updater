@@ -9,24 +9,30 @@ logger = logging.getLogger(__name__)
 import traceback
 
 import datetime
-
-from pandas.tseries.frequencies import to_offset
-
 from abc import ABCMeta, abstractmethod
+
+import requests
+
+import pandas as pd
+from pandas.tseries.frequencies import to_offset
+from pandas.core.common import is_number
+
+from arctic.exceptions import NoDataFoundException
 
 from ..library import idx_min, idx_max
 
+
 class Updater(object):
     __metaclass__ = ABCMeta
-
-    #shortname = 'DEF_UPD'
 
     def __init__(self, session=None):
         self.session = session
 
     def start_default(self, freq):
-        #return datetime.datetime(2012, 1, 1)
-        return self.end_default(freq) - freq * self.periods_default
+        if freq is None:
+            return self.end_default(freq) - freq * self.periods_default
+        else:
+            return datetime.datetime(2014, 1, 1)
 
     @property
     def periods_default(self):
@@ -35,8 +41,37 @@ class Updater(object):
     def end_default(self, freq):
         if freq == to_offset('D'):
             return (datetime.datetime.utcnow() - freq).replace(hour=0, minute=0, second=0, microsecond=0)
+        elif freq is None:
+            dt = datetime.datetime.utcnow()
+            year = dt.year
+            month = dt.month
+            if month == 1:
+                year -= 1
+            month = (month - 2) % 12 + 1
+            return datetime.datetime(year=year, month=month, day=1)
         else:
             return datetime.datetime.utcnow()
+
+    def _sanitize_dates(self, start, end):
+        """
+        Return (datetime_start, datetime_end) tuple
+        if start is None - default is 2010/01/01
+        if end is None - default is today
+        """
+        if is_number(start):
+            # regard int as year
+            start = dt.datetime(start, 1, 1)
+        start = pd.to_datetime(start)
+
+        if is_number(end):
+            end = dt.datetime(end, 1, 1)
+        end = pd.to_datetime(end)
+
+        if start is None:
+            start = dt.datetime(2010, 1, 1)
+        if end is None:
+            end = dt.datetime.today()
+        return start, end
 
     def _sanitize_bounds(self, symbol, start, end, freq, source, library):
         """
@@ -47,7 +82,10 @@ class Updater(object):
         if start is None:
             try:
                 dt_max = idx_max(library, symbol)
-                start = dt_max + freq
+                if freq is not None:
+                    start = dt_max + freq
+                else:
+                    start = dt_max + datetime.timedelta(days=1)
             except Exception as e:
                 start = self.start_default(freq)
                 logger.error(traceback.format_exc())
@@ -55,7 +93,10 @@ class Updater(object):
             if end is None:
                 try:
                     dt_min = idx_min(library, symbol)
-                    end = dt_min - freq
+                    if freq is not None:
+                        end = dt_min - freq
+                    else:
+                        end = dt_min - datetime.timedelta(days=1)
                 except Exception as e:
                     end = self.end_default(freq)
                     logger.error(traceback.format_exc())
@@ -64,7 +105,6 @@ class Updater(object):
         logger.debug("sanitized bounds %s %s %s" % (start, end, freq))
         return start, end, freq
 
-    @abstractmethod
     def set_credentials(self, *args, **kwargs):
         msg = "'%s' is not implemented in '%s'" \
             % ('set_credentials', self.__class__.__name__)
@@ -74,10 +114,22 @@ class Updater(object):
     def shortname(self):
         return 'DEF_UPD'
 
+    def library_name(self, source, freq):
+        if freq is None:
+            return self.shortname + '_' + source
+        else:
+            return self.shortname + '_' + source + '_' + str(freq)
+
     def _update(self, library, symbol, start, end, freq, source):
         logger.info("update '%s' using '%s' with source='%s' from '%s' to '%s'" % (
             symbol, self.__class__.__name__, source, start, end))
-        df = self.read(symbol, start, end, freq, source)
+        df_new = self.read(symbol, start, end, freq, source)
+        try:
+            df_prev = library.read(symbol).data
+            df = pd.concat([df_prev, df_new], verify_integrity=True)
+            df = df.sort_index()
+        except NoDataFoundException:
+            df = df_new
         logger.info("\n%s" % df)
         metadata = {
             'source': source,
@@ -111,3 +163,8 @@ class Updater(object):
         else:
             msg = "start=%s end=%s 'end' should be after 'start'" % (start, end)
             raise NotImplementedError(msg)
+
+    def _init_session(self, session, retry_count):
+        if session is None:
+            session = requests.Session()
+        return session

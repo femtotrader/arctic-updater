@@ -28,8 +28,3 @@ class PandasDataReaderUpdater(Updater):
         df = web.DataReader(symbol, source, start, end, session=self.session)
         df.index = df.index.tz_localize('UTC')  # see https://github.com/pydata/pandas-datareader/issues/154
         return df
-
-    def set_credentials(self, *args, **kwargs):
-        msg = "'%s' is not implemented in '%s'" \
-            % ('set_credentials', self.__class__.__name__)
-        raise NotImplementedError(msg)

@@ -19,17 +19,17 @@ from arctic_updater.updaters.factory import updater
 from arctic_updater.library import update
 from arctic_updater.utils import get_session
 from arctic_updater.defaults import (MONGO_HOST_DEFAULT, \
-    SOURCE_DEFAULT, FREQ_DEFAULT, SYMBOL_DEFAULT, UPDATER_DEFAULT)
+    SOURCE_DEFAULT, FREQ_DEFAULT, SYMBOLS_DEFAULT, UPDATER_DEFAULT)
 
 def main():
     parser = argparse.ArgumentParser(prog="store", description='Store data to DB')
     parser.add_argument('--host', help="MongoDB host", default=MONGO_HOST_DEFAULT, type=str)
     parser.add_argument('--updater', help="Updater", default=UPDATER_DEFAULT, type=str)
     parser.add_argument('-s', '--source', help="Source", default=SOURCE_DEFAULT, type=str)
-    parser.add_argument('--symbol', help="Symbol", default=SYMBOL_DEFAULT, type=str)
+    parser.add_argument('--symbols', help="Symbol", default=SYMBOLS_DEFAULT, type=str)
     parser.add_argument('--start', help="Start date", default='', type=str)
     parser.add_argument('--end', help="End date", default='', type=str)
-    parser.add_argument('--freq', help="Freq", default='D', type=str)
+    parser.add_argument('--freq', help="Freq", default='', type=str)
     parser.add_argument('--max_rows', help="max_rows", default=10, type=int)
     parser.add_argument('--max_columns', help="max_columns", default=6, type=int)
     parser.add_argument('--api_key', help="API key", default='', type=str)
@@ -62,12 +62,13 @@ def main():
         my_updater.set_credentials(api_key=args.api_key)
 
     store = Arctic(args.host)
-    library_name = args.updater.lower() + '_' + args.source.lower()
+    library_name = my_updater.library_name(args.source, freq)
     print(library_name)
     store.initialize_library(library_name)
     library = store[library_name]
 
-    update(library, my_updater, args.symbol, start, end, freq, args.source.lower())
+    for symbol in args.symbols.split(','):
+        update(library, my_updater, symbol, start, end, freq, args.source.lower())
 
 
 if __name__ == '__main__':

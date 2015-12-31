@@ -20,6 +20,12 @@ try:
 except ImportError:
     _HAS_PANDAS_DATAREADER = False
 
+try:
+    from .truefx import TrueFXUpdater
+    _HAS_TRUEFX = True
+except ImportError:
+    _HAS_TRUEFX = False
+
 _D_CLS_UPDATER = {}
 _D_CLS_UPDATER_SHORTNAME = {}
 _D_NOT_INSTALLED =  {}
@@ -42,19 +48,25 @@ def register(longname, cls):
     _D_CLS_UPDATER_SHORTNAME[cls.shortname] = cls
 
 def not_installed(longname, installation=''):
-    if installation=='':
-        installation = "pip install %s" % longname
     _D_NOT_INSTALLED[longname] = installation
 
+updater_name = 'quandl'
 if _HAS_QUANDL:
-    register('quandl', QuandlUpdater)
+    register(updater_name, QuandlUpdater)
 else:
-    not_installed('quandl', "pip install Quandl")
+    not_installed(updater_name, "pip install Quandl")
 
+updater_name = 'pandas_datareader'
 if _HAS_PANDAS_DATAREADER:
-    register('pandas_datareader', PandasDataReaderUpdater)
+    register(updater_name, PandasDataReaderUpdater)
 else:
-    not_installed('pandas_datareader')
+    not_installed(updater_name, 'pip install pandas_datareader')
+
+updater_name = 'truefx'
+if _HAS_TRUEFX:
+    register(updater_name, TrueFXUpdater)
+else:
+    not_installed(updater_name)
 
 if len(_D_NOT_INSTALLED)>0:
     logger.warning(_D_NOT_INSTALLED)
