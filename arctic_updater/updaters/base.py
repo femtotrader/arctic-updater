@@ -60,17 +60,17 @@ class Updater(object):
         """
         if is_number(start):
             # regard int as year
-            start = dt.datetime(start, 1, 1)
+            start = datetime.datetime(start, 1, 1)
         start = pd.to_datetime(start)
 
         if is_number(end):
-            end = dt.datetime(end, 1, 1)
+            end = datetime.datetime(end, 1, 1)
         end = pd.to_datetime(end)
 
         if start is None:
-            start = dt.datetime(2010, 1, 1)
+            start = datetime.datetime(2010, 1, 1)
         if end is None:
-            end = dt.datetime.today()
+            end = datetime.datetime.today()
         return start, end
 
     def _sanitize_bounds(self, symbol, start, end, freq, source, library):

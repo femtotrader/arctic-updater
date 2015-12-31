@@ -8,8 +8,7 @@ logger = logging.getLogger(__name__)
 
 import traceback
 
-from .base import Updater
-
+import os
 import datetime
 import requests
 
@@ -17,6 +16,9 @@ import pandas as pd
 import pandas.compat as compat
 from pandas.io.common import ZipFile
 from pandas.tseries.frequencies import to_offset
+
+from .base import Updater
+
 
 class TrueFXUpdater(Updater):
     shortname = 'TRUEFX'
@@ -37,8 +39,8 @@ class TrueFXUpdater(Updater):
     def _sanitize_symbol(self, symbol):
         return symbol.replace("/", "").upper()
 
-    def _filename_csv(self, symbol, year, month):
-        return "{symbol}-{year:04d}-{month:02d}.csv".format(year=year, month=month, symbol=symbol)
+    def _filename(self, symbol, year, month, ext):
+        return "{symbol}-{year:04d}-{month:02d}{ext}".format(year=year, month=month, symbol=symbol, ext=ext)
 
     def read(self, symbols, start, end, freq, source):
         """ read data """
@@ -52,6 +54,38 @@ class TrueFXUpdater(Updater):
             raise NotImplementedError("Can't download several symbols")
         return df
 
+    def _year_month_generator(self, start, end):
+        logger.debug("month generator from %s to %s" % (start, end))
+        months = pd.date_range(start=start, end=end, freq='MS')
+        for dt in months:
+            yield dt.year, dt.month
+
+    def _download(self, symbol, year, month, filename_cache, as_):
+        url = self.url(symbol, year, month)
+        if os.path.isfile(filename_cache) and os.path.getsize(filename_cache) > 0:
+            logger.debug("skip '%s'" % filename_cache)
+            fd = open(filename_cache, 'r')
+            from_file_cache = True
+            return fd, from_file_cache
+        else:
+            logger.debug("querying '%s'" % url)
+            response = self.session.get(url)
+            from_file_cache = False
+            if as_ == 'bytes':
+                data = compat.BytesIO(response.content)
+            elif as_ == 'string':
+                data = compat.StringIO(response.content)
+            else:
+                data = response.content
+            return data, from_file_cache
+
+    def download(self, symbol, year, month, cache_directory):
+        filename_cache = os.path.join(cache_directory, self._filename(symbol, year, month, '.zip'))
+        fd, from_file_cache = self._download(symbol, year, month, filename_cache, 'raw')
+        if not from_file_cache:
+            with open(filename_cache, 'w') as fd_cache:
+                fd_cache.write(fd)
+
     def _read_one_month(self, symbol, year, month):
         url = self.url(symbol, year, month)
         symbol = symbol.replace("/", "").upper()
@@ -62,7 +96,7 @@ class TrueFXUpdater(Updater):
             zip_data = compat.BytesIO(response.content)
 
             with ZipFile(zip_data, 'r') as zf:
-                zfile = zf.open(self._filename_csv(symbol, year, month))
+                zfile = zf.open(self._filename(symbol, year, month, '.csv'))
                 df = pd.read_csv(zfile, names=['Symbol', 'Date', 'Bid', 'Ask'])
 
             df['Date'] = pd.to_datetime(df['Date'], format='%Y%m%d %H:%M:%S.%f')
@@ -74,11 +108,9 @@ class TrueFXUpdater(Updater):
 
     def _read_several_months(self, symbol, start, end):
         symbol = self._sanitize_symbol(symbol)
-        months = pd.date_range(start, end, freq='MS')
         lst = []
         lst_errors = []
-        for dt in months:
-            year, month = dt.year, dt.month
+        for year, month in self._year_month_generator(start, end)
             try:
                 df = self._read_one_month(symbol, year, month)
                 lst.append(df)

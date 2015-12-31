@@ -18,15 +18,13 @@ from arctic_updater import arctic_updater
 from arctic_updater.updaters.factory import updater
 from arctic_updater.library import update
 from arctic_updater.utils import get_session
-from arctic_updater.defaults import (MONGO_HOST_DEFAULT, \
-    SOURCE_DEFAULT, FREQ_DEFAULT, SYMBOLS_DEFAULT, UPDATER_DEFAULT)
+from arctic_updater.defaults import (\
+    FREQ_DEFAULT, SYMBOLS_DEFAULT, UPDATER_DEFAULT)
 
 def main():
-    parser = argparse.ArgumentParser(prog="store", description='Store data to DB')
-    parser.add_argument('--host', help="MongoDB host", default=MONGO_HOST_DEFAULT, type=str)
-    parser.add_argument('--updater', help="Updater", default=UPDATER_DEFAULT, type=str)
-    parser.add_argument('-s', '--source', help="Source", default=SOURCE_DEFAULT, type=str)
-    parser.add_argument('--symbols', help="Symbol", default=SYMBOLS_DEFAULT, type=str)
+    parser = argparse.ArgumentParser(prog="download", description='')
+    parser.add_argument('--updater', help="Updater", default='truefx', type=str)
+    parser.add_argument('--symbols', help="Symbol", default='EURUSD', type=str)
     parser.add_argument('--start', help="Start date", default='', type=str)
     parser.add_argument('--end', help="End date", default='', type=str)
     parser.add_argument('--freq', help="Freq", default='', type=str)
@@ -34,6 +32,7 @@ def main():
     parser.add_argument('--max_columns', help="max_columns", default=6, type=int)
     parser.add_argument('--api_key', help="API key", default='', type=str)
     parser.add_argument('--expire_after', help="Cache expiration ('0': no cache, '-1': no expiration, 'HH:MM:SS.X': expiration duration)", default='24:00:00.0', type=str)
+    parser.add_argument('--cache_directory', help="Cache directory", default='cache/truefx', type=str)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
@@ -63,15 +62,13 @@ def main():
     if args.api_key != '':
         my_updater.set_credentials(api_key=args.api_key)
 
-    store = Arctic(args.host)
-    library_name = my_updater.library_name(args.source, freq)
-    print(library_name)
-    store.initialize_library(library_name)
-    library = store[library_name]
-
+    logger.info(args)
+    logger.info(my_updater)
+    start, end = my_updater._sanitize_dates(start, end)
     for symbol in symbols:
-        update(library, my_updater, symbol, start, end, freq, args.source.lower())
-
+        for year, month in my_updater._year_month_generator(start, end):
+            print(symbol, year, month)
+            my_updater.download(symbol, year, month, args.cache_directory)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
