@@ -25,7 +25,7 @@ from ..library import idx_min, idx_max
 class Updater(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, session=None):
+    def __init__(self, session=None, *args, **kwargs):
         self.session = session
 
     def start_default(self, freq):

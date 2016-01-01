@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--max_columns', help="max_columns", default=6, type=int)
     parser.add_argument('--api_key', help="API key", default='', type=str)
     parser.add_argument('--expire_after', help="Cache expiration ('0': no cache, '-1': no expiration, 'HH:MM:SS.X': expiration duration)", default='24:00:00.0', type=str)
-    parser.add_argument('--cache_directory', help="Cache directory", default='cache/truefx', type=str)
+    parser.add_argument('--cache_directory', help="Cache directory", default='~/cache/truefx/', type=str)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
@@ -59,20 +59,26 @@ def main():
     else:
         freq = None
 
-    symbols = args.symbols.split(',')
-
+    
     session = get_session(args.expire_after, 'cache')
-    my_updater = updater(args.updater, session=session)
+    my_updater = updater(args.updater, session=session, cache_directory=args.cache_directory)
     if args.api_key != '':
         my_updater.set_credentials(api_key=args.api_key)
 
+    if args.symbols != '':
+        symbols = args.symbols.split(',')
+    else:
+        symbols = my_updater.symbols
+
+
     logger.info(args)
     logger.info(my_updater)
+    logger.info(symbols)
     start, end = my_updater._sanitize_dates(start, end)
     for year, month in my_updater._year_month_generator(start, end):
         for symbol in symbols:
             print(symbol, year, month)
-            my_updater.download(symbol, year, month, args.cache_directory)
+            my_updater.download(symbol, year, month)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

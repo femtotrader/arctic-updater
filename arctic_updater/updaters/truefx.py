@@ -26,13 +26,13 @@ class TrueFXUpdater(Updater):
 
     """Get data from TrueFX"""
 
-    def __init__(self, retry_count=3, pause=0.001, session=None, cache_directory='cache/truefx'):
+    def __init__(self, retry_count=3, pause=0.001, session=None, cache_directory='~/cache/truefx/'):
         if not isinstance(retry_count, int) or retry_count < 0:
             raise ValueError("'retry_count' must be integer larger than 0")
         self.retry_count = retry_count
         self.pause = pause
         self.session = self._init_session(session, retry_count)
-        self.cache_directory = cache_directory
+        self.cache_directory = os.path.expanduser(cache_directory)
 
     def url(self, symbol, year, month):
         month_name = datetime.datetime(year=year, month=month, day=1).strftime('%B').upper()
@@ -65,9 +65,18 @@ class TrueFXUpdater(Updater):
             raise NotImplementedError("Can't download several symbols")
         return df
 
+
+    def _ym_to_int(self, year, month):
+        return year * 12 + month - 1
+
+    def _int_to_ym(self, i):
+        year, month = divmod(i, 12)
+        month += 1
+        return year, month
+
     def _year_month_generator(self, start, end, reversed=False):
         logger.debug("month generator from %s to %s" % (start, end))
-        months = pd.date_range(start=start, end=end, freq='MS')
+        months = pd.date_range(start=start, end=end, freq='MS')  # ToDo: use _ym_to_int and _int_to_ym instead?
         if reversed:
             _months = months[::-1]
         else:
@@ -103,8 +112,8 @@ class TrueFXUpdater(Updater):
                 data = response.content
             return data, from_file_cache
 
-    def download(self, symbol, year, month, cache_directory):
-        filename_cache = os.path.join(cache_directory, self._filename(symbol, year, month, '.zip'))
+    def download(self, symbol, year, month):
+        filename_cache = os.path.join(self.cache_directory, self._filename(symbol, year, month, '.zip'))
         fd, from_file_cache = self._get(symbol, year, month, filename_cache, 'raw')
         if not from_file_cache:
             with open(filename_cache, 'w') as fd_cache:
