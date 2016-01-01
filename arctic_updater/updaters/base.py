@@ -30,9 +30,9 @@ class Updater(object):
 
     def start_default(self, freq):
         if freq is None:
-            return self.end_default(freq) - freq * self.periods_default
-        else:
             return datetime.datetime(2014, 1, 1)
+        else:
+            return self.end_default(freq) - freq * self.periods_default
 
     @property
     def periods_default(self):
@@ -152,6 +152,8 @@ class Updater(object):
         """
 
         start, end, freq = self._sanitize_bounds(symbol, start, end, freq, source, library)
+        msg = "%s %s %s" % (start, end, freq)
+        logger.debug(msg)
         if start is None or end is None:
             self._update(library, symbol, start, end, freq, source)
         elif start < end:

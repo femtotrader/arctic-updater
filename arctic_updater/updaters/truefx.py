@@ -44,6 +44,15 @@ class TrueFXUpdater(Updater):
     def _filename(self, symbol, year, month, ext):
         return "{symbol}-{year:04d}-{month:02d}{ext}".format(year=year, month=month, symbol=symbol, ext=ext)
 
+    @property
+    def symbols(self):
+        return ["AUDJPY", "AUDNZD", "AUDUSD", "CADJPY", "CHFJPY", \
+            "EURCHF", "EURGBP", "EURJPY", "EURUSD", "GBPJPY", "GBPUSD", \
+            "NZDUSD", "USDCAD", "USDCHF", "USDJPY"]
+
+    def start_default(self, freq):
+        return datetime.datetime(2009, 5, 1)
+
     def read(self, symbols, start, end, freq, source):
         """ read data """
         assert source == 'ticks' and freq is None
@@ -56,10 +65,14 @@ class TrueFXUpdater(Updater):
             raise NotImplementedError("Can't download several symbols")
         return df
 
-    def _year_month_generator(self, start, end):
+    def _year_month_generator(self, start, end, reversed=False):
         logger.debug("month generator from %s to %s" % (start, end))
         months = pd.date_range(start=start, end=end, freq='MS')
-        for dt in months:
+        if reversed:
+            _months = months[::-1]
+        else:
+            _months = months
+        for dt in _months:
             yield dt.year, dt.month
 
     def _get(self, symbol, year, month, filename_cache, as_):

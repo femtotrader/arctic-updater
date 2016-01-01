@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-
+python arctic_updater/cli/arctic_updater_cli.py --updater truefx --symbols EURUSD,AUDUSD --source ticks --start 20100101
 """
 
 import logging
@@ -69,8 +69,8 @@ def main():
     logger.info(args)
     logger.info(my_updater)
     start, end = my_updater._sanitize_dates(start, end)
-    for symbol in symbols:
-        for year, month in my_updater._year_month_generator(start, end):
+    for year, month in my_updater._year_month_generator(start, end):
+        for symbol in symbols:
             print(symbol, year, month)
             my_updater.download(symbol, year, month, args.cache_directory)
 
