@@ -133,7 +133,9 @@ class TrueFXUpdater(Updater):
             try:
                 df = self._read_one_month(symbol, year, month)
                 lst.append(df)
-            except:
+            except KeyError:
+                pass
+            except Exception as e:
                 lst_errors.append((symbol, year, month))
                 logger.error(traceback.format_exc())
         df_all = pd.concat(lst)
