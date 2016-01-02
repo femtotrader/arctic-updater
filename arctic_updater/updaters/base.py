@@ -30,7 +30,7 @@ class Updater(object):
 
     def start_default(self, freq):
         if freq is None:
-            return datetime.datetime(2014, 1, 1)
+            return datetime.datetime(2010, 1, 1)
         else:
             return self.end_default(freq) - freq * self.periods_default
 
@@ -52,7 +52,7 @@ class Updater(object):
         else:
             return datetime.datetime.utcnow()
 
-    def _sanitize_dates(self, start, end):
+    def _sanitize_dates(self, start, end, freq=None):
         """
         Return (datetime_start, datetime_end) tuple
         if start is None - default is 2010/01/01
@@ -68,9 +68,9 @@ class Updater(object):
         end = pd.to_datetime(end)
 
         if start is None:
-            start = datetime.datetime(2010, 1, 1)
+            start = self.start_default(freq)
         if end is None:
-            end = datetime.datetime.today()
+            end = self.end_default(freq)
         return start, end
 
     def _sanitize_bounds(self, symbol, start, end, freq, source, library):

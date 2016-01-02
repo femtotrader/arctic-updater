@@ -53,6 +53,11 @@ class TrueFXUpdater(Updater):
     def start_default(self, freq):
         return datetime.datetime(2009, 5, 1)
 
+    def end_default(self, freq):
+        dt = datetime.datetime.utcnow()
+        dt -= datetime.timedelta(days=60)
+        return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
     def read(self, symbols, start, end, freq, source):
         """ read data """
         assert source == 'ticks' and freq is None
