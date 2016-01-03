@@ -92,12 +92,12 @@ class TrueFXUpdater(Updater):
     def _get(self, symbol, year, month, filename_cache, as_):
         url = self.url(symbol, year, month)
         if os.path.isfile(filename_cache) and os.path.getsize(filename_cache) > 0:
-            logger.debug("skip '%s'" % filename_cache)
+            logger.debug("loading file '%s'" % filename_cache)
             fd = open(filename_cache, 'r')
             from_file_cache = True
             return fd, from_file_cache
         else:
-            logger.debug("querying '%s'" % url)
+            logger.debug("querying url '%s'" % url)
             response = self.session.get(url)
 
             response = self.session.get(url)
@@ -125,7 +125,6 @@ class TrueFXUpdater(Updater):
                 fd_cache.write(fd)
 
     def _read_one_month(self, symbol, year, month):
-        url = self.url(symbol, year, month)
         symbol = symbol.replace("/", "").upper()
         filename_cache = os.path.join(self.cache_directory, self._filename(symbol, year, month, '.zip'))
         zip_data, from_file_cache = self._get(symbol, year, month, filename_cache, 'bytes')

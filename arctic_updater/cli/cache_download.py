@@ -3,6 +3,7 @@
 
 """
 python arctic_updater/cli/cache_download.py --updater truefx --symbols "" --start 20090501 --end 20151101
+python arctic_updater/cli/cache_download.py --updater truefx --symbols "" --start 20090501 --end 20151101 --cache_directory /Volumes/public/cache/truefx/
 """
 
 import logging

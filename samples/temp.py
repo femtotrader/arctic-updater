@@ -1,0 +1,27 @@
+import logging
+import pandas as pd
+pd.set_option('max_rows', 10)
+pd.set_option('expand_frame_repr', False)
+pd.set_option('max_columns', 6)
+
+from arctic_updater.updaters.truefx import TrueFXUpdater
+logging.basicConfig(level=logging.DEBUG)
+my_updater = TrueFXUpdater()
+symbol = 'EURUSD'
+year, month = 2015, 11
+%time df = my_updater._read_one_month(symbol, year, month)
+
+# Arctic (MongoDB)
+from arctic import Arctic
+store = Arctic('localhost')
+library_name = 'test'
+store.initialize_library(library_name)
+library = store[library_name]
+
+%time library.write(symbol, df)
+%time df_retrieved = library.read(symbol).data
+
+# HDF5
+filename = my_updater._filename(symbol, year, month, '.h5')
+%time df.to_hdf(filename, "data", mode='w', complevel=0, complib='zlib', format='table')
+%time df_retrieved = pd.read_hdf(filename)
