@@ -33,10 +33,9 @@ for symbol in symbols:
     df['us'] = (df['Date'].groupby((df['Date'].diff() != pd.to_timedelta(0)).cumsum()).cumcount()).values.astype('timedelta64[us]')
     df['Date'] = df['Date'] + df['us']
     #remove helper column
-    df = df.drop(['us'], axis=1)
+    df = df.drop(['us', 'Symbol'], axis=1)
     #set column Date as index
-    df = df.set_index('Date')
-    assert df.index.is_unique
+    df = df.set_index('Date', verify_integrity=True)
     
     # Save to HDF5
     filename = my_updater._filename(symbol, year, month, '.h5')
@@ -48,6 +47,9 @@ for symbol in symbols:
 logger.info("concatenate")
 df_all = pd.concat(d_df, axis=1)
 print(df_all)
-filename = "all-%04d-%2d.h5" % (year, month)
+filename = "all-%s-%04d-%2d.h5" % ('bid', year, month)
 logger.info("save to %s" % filename)
-df_all.to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
+df_all.swaplevel(0, 1, axis=1)['Bid'].to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
+filename = "all-%s-%04d-%2d.h5" % ('ask', year, month)
+logger.info("save to %s" % filename)
+df_all.swaplevel(0, 1, axis=1)['Ask'].to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
