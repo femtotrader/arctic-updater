@@ -47,9 +47,18 @@ for symbol in symbols:
 logger.info("concatenate")
 df_all = pd.concat(d_df, axis=1)
 print(df_all)
-filename = "all-%s-%04d-%2d.h5" % ('bid', year, month)
-logger.info("save to %s" % filename)
-df_all.swaplevel(0, 1, axis=1)['Bid'].to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
-filename = "all-%s-%04d-%2d.h5" % ('ask', year, month)
-logger.info("save to %s" % filename)
-df_all.swaplevel(0, 1, axis=1)['Ask'].to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
+df_all = df_all.swaplevel(0, 1, axis=1)
+d = {}
+filename = "all-panel-%s-%04d-%2d.h5" % ('ask', year, month)
+for col in ['Bid', 'Ask']:
+    d[col] = df_all[col]
+panel = pd.Panel.from_dict(d)
+panel.to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
+
+#filename = "all-%s-%04d-%2d.h5" % ('bid', year, month)
+#logger.info("save to %s" % filename)
+#df_all['Bid'].to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
+
+#filename = "all-%s-%04d-%2d.h5" % ('ask', year, month)
+#logger.info("save to %s" % filename)
+#df_all['Ask'].to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
