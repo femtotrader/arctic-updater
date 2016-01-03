@@ -47,6 +47,7 @@ for symbol in symbols:
 
 logger.info("concatenate")
 df_all = pd.concat(d_df, axis=1)
+print(df_all)
 filename = "all-%04d-%2d.h5" % (year, month)
 logger.info("save to %s" % filename)
-df.to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
+df_all.to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
