@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 
 my_updater = TrueFXUpdater()
 
-symbols = ['EURGBP', 'EURUSD', 'USDCHF', 'USDJPY']
+#symbols = ['EURGBP', 'EURUSD', 'USDCHF', 'USDJPY']
+symbols = my_updater.symbols
+logger.info("processing %s" % symbols)
+
 d_df = OrderedDict()
 
 year, month = 2015, 11
@@ -23,15 +26,17 @@ year, month = 2015, 11
 #    df = pd.read_hdf(filename, "data")
 #    assert df.index.is_unique
 
-for symbol in symbols:
-    logger.info(symbol)
+for i, symbol in enumerate(symbols):
+    logger.info("%d / %d : %s" % (i+1, len(symbols), symbol))
     df = my_updater._read_one_month(symbol, year, month)
     
     logger.info("build unique index")
-    df = df.sort_index()
+    
     df = df.reset_index()
-    df['us'] = (df['Date'].groupby((df['Date'].diff() != pd.to_timedelta(0)).cumsum()).cumcount()).values.astype('timedelta64[us]')
-    df['Date'] = df['Date'] + df['us']
+    df = df.sort_values('Date')
+    #df['Date'] = df['Date']+(df['Date'].groupby((df['Date'] != df['Date'].shift()).cumsum()).cumcount()).values.astype('timedelta64[ns]')
+    df.loc[df['Date'] == df['Date'].shift(), 'Date'] =  df['Date'] + ((df['Date'] == df['Date'].shift()).cumsum()).astype('timedelta64[ns]')
+
     #remove helper column
     df = df.drop(['us', 'Symbol'], axis=1)
     #set column Date as index
@@ -46,7 +51,7 @@ for symbol in symbols:
 
 logger.info("concatenate")
 df_all = pd.concat(d_df, axis=1)
-print(df_all)
+logger.info(df_all)
 df_all = df_all.swaplevel(0, 1, axis=1)
 d = {}
 filename = "all-panel-%s-%04d-%2d.h5" % ('ask', year, month)
@@ -62,3 +67,6 @@ panel.to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
 #filename = "all-%s-%04d-%2d.h5" % ('ask', year, month)
 #logger.info("save to %s" % filename)
 #df_all['Ask'].to_hdf(filename, "data", mode='w', complevel=5, complib='zlib')
+
+logger.info("DONE")
+
